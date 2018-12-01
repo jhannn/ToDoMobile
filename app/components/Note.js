@@ -1,22 +1,22 @@
-import React, {Component} from 'react';
-import {StyleSheet, Text, View, TextInput, ScrollView, TouchableOpacity, Image} from 'react-native';
+import React, { Component } from 'react';
+import { StyleSheet, Text, View, TextInput, ScrollView, TouchableOpacity, Image } from 'react-native';
 
 
 export default class Note extends Component {
-  render() {
-    return (
-        <View key={this.props.keyval} style={styles.note}>
-            <Text style={styles.noteText}>{this.props.val.date.getDate()+"/"+this.props.val.date.getMonth()+"/"+this.props.val.date.getYear()}</Text>
-            <Text style={styles.noteText}>{this.props.val.note}</Text>
-            <TouchableOpacity onPress={this.props.deleteMethod} style={styles.noteDelete}>
-                <Image
-                    style={styles.buttonDelete}
-                    source={require('./lixo.png')}
-                />
-            </TouchableOpacity>
-        </View>
-    );
-  }
+    render() {
+        return (
+            <View key={this.props.keyval} style={styles.note}>
+                <Text style={styles.noteText}>{this.props.val.date.getDate() + "/" + this.props.val.date.getMonth()}</Text>
+                <Text style={styles.noteText}>{this.props.val.note}</Text>
+                <TouchableOpacity onPress={this.props.deleteMethod} style={styles.noteDelete}>
+                    <Image
+                        style={styles.buttonDelete}
+                        source={require('../icons/lixo.png')}
+                    />
+                </TouchableOpacity>
+            </View>
+        );
+    }
 }
 
 const styles = StyleSheet.create({
@@ -24,7 +24,7 @@ const styles = StyleSheet.create({
         position: 'relative',
         padding: 20,
         paddingRight: 100,
-        borderBottomWidth:2,
+        borderBottomWidth: 2,
         borderBottomColor: '#ededed'
     },
     noteText: {
@@ -46,7 +46,7 @@ const styles = StyleSheet.create({
         color: 'white'
     },
     buttonDelete: {
-        width: 20, 
+        width: 20,
         height: 20
     }
 });

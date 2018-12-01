@@ -1,198 +1,191 @@
-import React, {Component} from 'react';
-import {StyleSheet, Text, View, TextInput, ScrollView, TouchableOpacity, Alert} from 'react-native';
+import React, { Component } from 'react';
+import { StyleSheet, Text, View, TextInput, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 
 import Note from './Note';
 const Realm = require('realm');
-//import Firebase from 'firebase';
+const axios = require('axios');
 
 export default class Main extends Component {
 
-  constructor(props){
+  constructor(props) {
     super(props);
     this.state = {
       realm: null,
       noteText: '',
-      idMax: 1
+      messagesDefault: [
+        'Aconteceu algum erro, tente novamente.'
+      ]
     }
   }
 
   componentWillMount() {
-    //Firebase
-    /*var config = {
-      apiKey: "AIzaSyAxU4wWL5OJLo8nqOsCoCs1b9QaQt6bqCk",
-      authDomain: "todomobile-68b4b.firebaseapp.com",
-      databaseURL: "https://todomobile-68b4b.firebaseio.com",
-      projectId: "todomobile-68b4b",
-      storageBucket: "todomobile-68b4b.appspot.com",
-      messagingSenderId: "759413461210"
-    };
-    firebase.initializeApp(config);*/
-    //Realm
-    let date = Date();
-    let proxId = this.state.idMax;
-    Realm.open({
-      schema: [{name: 'List', primaryKey:'id', properties: {id: 'int', note: 'string', date: 'date'}}]
-    }).then(realm => {
-      if(realm.objects('List').length<1){
-        realm.write(() => {
-          realm.create('List', {id: this.state.idMax, note: 'Test', date: date});
-        });
-      }
-      let arrayOrdened = realm.objects('List').sorted('id', false);
-      proxId = arrayOrdened[0].id;
-      this.setState({ idMax: proxId });
-      this.setState({ realm });
-      //Populando Firebase
-      /*for(let i=0; i<realm.objects('List').length;i++){
-        firebase.database().ref('itens/'+realm.objects('List')[i].id).set({
-          id: realm.objects('List')[i].id,
-          note: realm.objects('List')[i].note,
-          date: realm.objects('List')[i].date
+    try {
+      axios.get('http://10.0.0.102:3000/itens')
+        .then((response) => {
+          if (response.data.sucess == true) {
+            Realm.open({
+              schema: [{ name: 'List', primaryKey: 'id', properties: { id: 'int', note: 'string', date: 'date' } }]
+            }).then(realm => {
+              if (response.data.itens.length > 0) {
+                realm.write(() => {
+                  realm.deleteAll();
+                  for (i = 0; i < response.data.itens.length; i++) {
+                    realm.create('List', { id: response.data.itens[i].id, note: response.data.itens[i].note, date: response.data.itens[i].date });
+                  }
+                });
+              }
+              this.setState({ realm });
+            });
+          }
+        }).catch(function (error) {
+          alert(this.state.messagesDefault[0]);
+          console.log(error);
         })
-      };*/
-
-    });
+    } catch (error) {
+      alert(this.state.messagesDefault[0]);
+      console.log(error);
+    }
   }
+
 
   render() {
 
     let notes = {};
-    if (this.state.realm){
-      notes = this.state.realm.objects('List').map((val) =>{
+    if (this.state.realm) {
+      notes = this.state.realm.objects('List').map((val) => {
         return <Note key={val.id} keyval={val.id} val={val} noteText={this.state.noteText}
-                /*renameMethod={() => this.renameNote.bind(this)}*/
-                deleteMethod={() => this.deleteNote(val.id)} />
+          deleteMethod={() => this.deleteNote(val.id)} />
       })
     } else {
-      notes = <Text>Loading ...</Text>;
+      notes = <ActivityIndicator size="large" color="#0000ff" />;
     }
 
     return (
       <View style={styles.container}>
-          <View style={styles.header}>
-            <Text style={styles.headerText}>- Agenda -</Text>
-          </View>
-          <ScrollView style={styles.scrollContainer}>
-            {notes}      
-          </ScrollView>
-          <View style={styles.footer}>
-            <TextInput 
-              style={styles.textInput}
-              onChangeText={(noteText) => this.setState({noteText})}
-              value={this.state.noteText}
-              placeholder='Escreva aki o que deseja adicionar!'
-              placeholderTextColor='white'
-              underlineColorAndroid='transparent'>
-            </TextInput>
-          </View>
-          <TouchableOpacity onPress={this.addNote.bind(this)} style={styles.addButton}>
-            <Text style={styles.addButtonText}>+</Text>
-          </TouchableOpacity>
+        <View style={styles.header}>
+          <Text style={styles.headerText}>- Lista de Afazeres -</Text>
+        </View>
+        <ScrollView style={styles.scrollContainer}>
+          {notes}
+        </ScrollView>
+        <View style={styles.footer}>
+          <TextInput
+            style={styles.textInput}
+            onChangeText={(noteText) => this.setState({ noteText })}
+            value={this.state.noteText}
+            placeholder='Escreva aki o que deseja adicionar!'
+            placeholderTextColor='white'
+            underlineColorAndroid='transparent'>
+          </TextInput>
+        </View>
+        <TouchableOpacity onPress={this.addNote.bind(this)} style={styles.addButton}>
+          <Text style={styles.addButtonText}>+</Text>
+        </TouchableOpacity>
       </View>
     );
   }
 
   addNote() {
-    if (this.state.noteText){
-      var date = new Date();
-      let proxId = this.state.idMax + 1;
+    if (this.state.noteText) {
       var realm = this.state.realm;
-      let notes = this.state.realm.objects('List');
-      let existId = true;
-      while(existId){
-        let noteAdd = notes.filtered('id=' + proxId + '')
-        if(noteAdd.length<1){
-          existId=false;
-          try{
-            realm.write(() => {
-              realm.create('List', {id: proxId, note: this.state.noteText, date: date});
-            });
-            this.setState({idMax: proxId })
-            this.setState({ realm });
-            this.setState({noteText:''});
-          } 
-          catch (error) {
-            alert(error);
-          }
-        }else{
-          proxId = proxId + 1;
-        }
+      try {
+        axios.post('http://10.0.0.102:3000/itens', { note: this.state.noteText })
+          .then((response) => {
+            if (response.data.length > 0) {
+              realm.write(() => {
+                realm.create('List', { id: response.data[0].id, note: response.data[0].note, date: response.data[0].date });
+              });
+              alert("Adicionado com sucesso!");
+              this.setState({ realm });
+              this.setState({ noteText: '' });
+            }
+            else {
+              alert(this.state.messagesDefault[0]);
+              console.log(response);
+            }
+          }).catch(function (error) {
+            alert(this.state.messagesDefault[0]);
+            console.log(error);
+          })
+      }
+      catch (error) {
+        alert(this.state.messagesDefault[0]);
+        console.log(error);
       }
     }
-    else{
+    else {
       alert('Coloque algum texto!')
     }
   }
 
-  /*renameNote(key, note){
-    var realm = this.state.realm;
-    try{
-      realm.write(() => {
-        realm.create('List', {id: key, note: note}, true);
-      });
-      this.setState({ realm });
-      } 
-    catch (error) {
-      alert(error);
-    }
-  }*/
-
-  deleteNote(key){
-    Alert.alert('Delete', 'Quer realmente apagar esse item?', [ 
-        {text: 'Cancel', onPress: () => console.log('Cancel Pressed'), style: 'cancel'},
-        {text: 'OK', onPress: () => {
+  deleteNote(key) {
+    Alert.alert('Delete', 'Quer realmente apagar esse item?', [
+      { text: 'Cancel', onPress: () => console.log('Cancel Pressed'), style: 'cancel' },
+      {
+        text: 'OK', onPress: () => {
           let notes = this.state.realm.objects('List');
           let noteDeleting = notes.filtered('id=' + key + '')
           var realm = this.state.realm;
-          try{
-            realm.write(() => {
-              realm.delete(noteDeleting);
-            });
-            this.setState({ realm });
-          } 
+          try {
+            axios.get('http://10.0.0.102:3000/itens/delete/' + key)
+              .then((response) => {
+                if (response.data.sucess == true) {
+                  realm.write(() => {
+                    realm.delete(noteDeleting);
+                  });
+                  alert('Item deletado com sucesso!');
+                  this.setState({ realm });
+                }
+                else {
+                  alert(this.state.messagesDefault[0]);
+                  console.log(response);
+                }
+              })
+          }
           catch (error) {
-            alert(error);
+            alert(this.state.messagesDefault[0]);
+            console.log(error);
           }
         }
       }
-      ], [{ cancelable: false }]);
+    ], [{ cancelable: false }]);
   }
 }
 
 const styles = StyleSheet.create({
   container: {
-      flex: 1,
+    flex: 1,
   },
   header: {
-      backgroundColor: '#4d4dff',
-      alignItems: 'center',
-      justifyContent:'center',
-      borderBottomWidth: 10,
-      borderBottomColor: '#ddd'
+    backgroundColor: '#4d4dff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderBottomWidth: 10,
+    borderBottomColor: '#ddd'
   },
   headerText: {
-      color: 'white',
-      fontSize: 18,
-      padding: 26
+    color: 'white',
+    fontSize: 18,
+    padding: 26
   },
   scrollContainer: {
-      flex: 1,
-      marginBottom: 100
+    flex: 1,
+    marginBottom: 100
   },
   footer: {
-      position: 'absolute',
-      bottom: 0,
-      left: 0,
-      right: 0,
-      zIndex: 10
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10
   },
   textInput: {
-      alignSelf: 'stretch',
-      color: '#fff',
-      padding: 20,
-      backgroundColor: '#252525',
-      borderTopWidth:2,
-      borderTopColor: '#ededed'
+    alignSelf: 'stretch',
+    color: '#fff',
+    padding: 20,
+    backgroundColor: '#252525',
+    borderTopWidth: 2,
+    borderTopColor: '#ededed'
   },
   addButton: {
     position: 'absolute',
